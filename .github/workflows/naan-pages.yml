@@ -17,9 +17,6 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: naan
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -29,11 +26,20 @@ jobs:
         with:
           node-version: '22'
 
-      - name: Install dependencies
-        run: npm install --no-audit --no-fund
-
-      - name: Build single-file Naan app
-        run: npm run build
+      - name: Install and build Naan
+        run: |
+          if [ -f package.json ]; then
+            npm install --legacy-peer-deps --no-audit --no-fund
+            npm run build
+            mkdir -p _pages && cp -r dist/. _pages/
+          elif [ -f naan/package.json ]; then
+            cd naan
+            npm install --legacy-peer-deps --no-audit --no-fund
+            npm run build
+            mkdir -p ../_pages && cp -r dist/. ../_pages/
+          else
+            echo "package.json not found" && exit 1
+          fi
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
@@ -41,7 +47,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: './naan/dist'
+          path: './_pages'
 
   deploy:
     environment:
